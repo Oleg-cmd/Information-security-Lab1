@@ -178,17 +178,22 @@ const authenticateToken = async (req, res, next) => {
 - **Semgrep** - статический анализатор с правилами безопасности
 - **ESLint Security Plugin** - проверка кода на потенциальные уязвимости
 
-![SAST Report](https://via.placeholder.com/800x400/2196F3/ffffff?text=SAST+Scan+Results)
+![SAST Report](https://github.com/Oleg-cmd/Information-security-Lab1/actions/runs/18060423221/job/51395861290)
 
-*Скриншот отчета SAST сканирования из GitHub Actions*
+<img width="207" height="296" alt="image" src="https://github.com/user-attachments/assets/9b951911-d8f8-4f16-9c25-044d22e1ef6f" />
+<img width="603" height="601" alt="image" src="https://github.com/user-attachments/assets/c06f59a2-0543-47dc-8f1c-1d3167bdf21b" />
+<img width="668" height="674" alt="image" src="https://github.com/user-attachments/assets/de382ebc-f907-4814-8371-2fcd6c034a72" />
+<img width="517" height="560" alt="image" src="https://github.com/user-attachments/assets/6170370a-744a-4f15-83d3-5e31e87ec6b3" />
+
+
 
 ### Отчет SCA (Software Composition Analysis)  
-Для анализа зависимостей используются:
-- **OWASP Dependency-Check** - проверка зависимостей на известные CVE
+Для анализа зависимостей используется SNYK
 
-![SCA Report](https://via.placeholder.com/800x400/4CAF50/ffffff?text=SCA+Dependency+Check+Results)
+![SCA Report](https://github.com/Oleg-cmd/Information-security-Lab1/actions/runs/18060423221/job/51395861264)
 
-*Скриншот отчета SCA сканирования из GitHub Actions*
+<img width="1164" height="197" alt="image" src="https://github.com/user-attachments/assets/fdda38f7-5f38-43fc-9a12-90e33ea81e1d" />
+
 
 ### CI/CD Pipeline
 Настроен автоматический запуск сканеров безопасности при каждом push и pull request. Pipeline включает:
@@ -198,9 +203,10 @@ const authenticateToken = async (req, res, next) => {
 3. **Build & Test** - сборка и тестирование приложения
 4. **Security Reports** - генерация сводных отчетов
 
-![CI/CD Pipeline](https://via.placeholder.com/800x300/FF9800/ffffff?text=GitHub+Actions+Security+Pipeline)
+![CI/CD Pipeline]([https://via.placeholder.com/800x300/FF9800/ffffff?text=GitHub+Actions+Security+Pipeline](https://github.com/Oleg-cmd/Information-security-Lab1/actions/runs/18060423221))
 
-*Скриншот успешного выполнения CI/CD pipeline с security checks*
+<img width="1091" height="652" alt="image" src="https://github.com/user-attachments/assets/02168730-46ff-4c89-a56d-a5e2ff62a98b" />
+
 
 ### Тестовые данные
 
@@ -214,6 +220,6 @@ const authenticateToken = async (req, res, next) => {
 
 ---
 
-**Автор:** Селянта Олег
+**Автор:** Селянта Олег  
 **Дата:** 2025  
 **Дисциплина:** Информационная безопастность
