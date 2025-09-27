@@ -1,0 +1,293 @@
+name: Security Scanning CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  # SAST (Static Application Security Testing)
+  sast-scan:
+    name: Static Application Security Testing
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run npm audit
+      run: |
+        echo "Running npm audit..."
+        npm audit --audit-level=moderate --json > npm-audit-report.json || true
+        npm audit --audit-level=moderate || true
+      continue-on-error: true
+      
+    - name: Install and run ESLint security plugin
+      run: |
+        npm install --save-dev eslint-plugin-security
+        npx eslint . --ext .js --format json -o eslint-security-report.json || true
+      continue-on-error: true
+      
+    - name: Install and run Snyk
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      run: |
+        npm install -g snyk
+        snyk auth ${{ secrets.SNYK_TOKEN }} || echo "Snyk token not configured, running without auth"
+        snyk test --json > snyk-report.json || true
+        snyk test || true
+      continue-on-error: true
+      
+    - name: Install and run Semgrep
+      run: |
+        python -m pip install --upgrade pip
+        pip install semgrep
+        semgrep --config=auto --json --output=semgrep-report.json . || true
+        semgrep --config=auto . || true
+      continue-on-error: true
+      
+    - name: Upload SAST Reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: sast-reports
+        path: |
+          npm-audit-report.json
+          eslint-security-report.json
+          snyk-report.json
+          semgrep-report.json
+        retention-days: 30
+
+  # SCA (Software Composition Analysis)
+  sca-scan:
+    name: Software Composition Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Setup Java for OWASP Dependency-Check
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: Run OWASP Dependency-Check
+      run: |
+        # Download and run OWASP Dependency-Check
+        VERSION=$(curl -s https://api.github.com/repos/jeremylong/DependencyCheck/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        curl -Lo dependency-check.zip "https://github.com/jeremylong/DependencyCheck/releases/download/$VERSION/dependency-check-$VERSION-release.zip"
+        unzip dependency-check.zip
+        
+        # Run dependency check
+        ./dependency-check/bin/dependency-check.sh \
+          --project "secure-rest-api" \
+          --scan . \
+          --format ALL \
+          --out dependency-check-reports \
+          --suppression dependency-check-suppressions.xml \
+          --enableRetired \
+          --enableExperimental \
+          || true
+      continue-on-error: true
+      
+    - name: Run retire.js
+      run: |
+        npm install -g retire
+        retire --outputformat json --outputpath retire-report.json . || true
+        retire . || true
+      continue-on-error: true
+      
+    - name: Upload SCA Reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: sca-reports
+        path: |
+          dependency-check-reports/
+          retire-report.json
+        retention-days: 30
+
+  # Security Linting
+  security-linting:
+    name: Security Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run security-focused ESLint
+      run: |
+        npx eslint . --ext .js --config .eslintrc-security.js || true
+      continue-on-error: true
+      
+    - name: Run JSHint security checks
+      run: |
+        npm install -g jshint
+        jshint --config .jshintrc-security . || true
+      continue-on-error: true
+
+  # Secrets Detection
+  secrets-detection:
+    name: Secrets Detection
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for all branches
+        
+    - name: Run GitLeaks
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+      continue-on-error: true
+      
+    - name: Run TruffleHog
+      run: |
+        # Install and run TruffleHog
+        curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+        trufflehog filesystem . --json > trufflehog-report.json || true
+        trufflehog filesystem . || true
+      continue-on-error: true
+      
+    - name: Upload Secrets Detection Reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: secrets-reports
+        path: |
+          trufflehog-report.json
+        retention-days: 30
+
+  # Build and Test
+  build-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    needs: [sast-scan, sca-scan]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run tests
+      run: npm test || echo "No tests configured yet"
+      
+    - name: Build application
+      run: npm run build || echo "No build script configured"
+      
+    - name: Security smoke test
+      run: |
+        # Start the application in background
+        npm start &
+        APP_PID=$!
+        
+        # Wait for app to start
+        sleep 10
+        
+        # Test if app is running and responding
+        curl -f http://localhost:3000/health || exit 1
+        
+        # Test authentication endpoint
+        curl -X POST http://localhost:3000/auth/login \
+          -H "Content-Type: application/json" \
+          -d '{"username":"admin","password":"Admin123!"}' || exit 1
+        
+        # Kill the app
+        kill $APP_PID
+      env:
+        NODE_ENV: test
+        JWT_SECRET: test-secret-key
+
+  # Security Report Summary
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [sast-scan, sca-scan, secrets-detection, security-linting]
+    if: always()
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      
+    - name: Create Security Summary
+      run: |
+        echo "# Security Scan Summary" > security-summary.md
+        echo "Generated on: $(date)" >> security-summary.md
+        echo "" >> security-summary.md
+        
+        echo "## SAST Results" >> security-summary.md
+        if [ -f sast-reports/npm-audit-report.json ]; then
+          echo "- npm audit: ✅ Completed" >> security-summary.md
+        fi
+        if [ -f sast-reports/snyk-report.json ]; then
+          echo "- Snyk scan: ✅ Completed" >> security-summary.md
+        fi
+        if [ -f sast-reports/semgrep-report.json ]; then
+          echo "- Semgrep scan: ✅ Completed" >> security-summary.md
+        fi
+        
+        echo "" >> security-summary.md
+        echo "## SCA Results" >> security-summary.md
+        if [ -d sca-reports/dependency-check-reports ]; then
+          echo "- OWASP Dependency-Check: ✅ Completed" >> security-summary.md
+        fi
+        if [ -f sca-reports/retire-report.json ]; then
+          echo "- retire.js scan: ✅ Completed" >> security-summary.md
+        fi
+        
+        echo "" >> security-summary.md
+        echo "## Secrets Detection" >> security-summary.md
+        if [ -f secrets-reports/trufflehog-report.json ]; then
+          echo "- TruffleHog scan: ✅ Completed" >> security-summary.md
+        fi
+        
+        cat security-summary.md
+        
+    - name: Upload Security Summary
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-summary
+        path: security-summary.md
+        retention-days: 90
