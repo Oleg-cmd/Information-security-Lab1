@@ -97,6 +97,13 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
         
+    - name: Cache OWASP Dependency-Check database
+      uses: actions/cache@v4
+      with:
+        path: ~/.gradle/dependency-check-data
+        key: dependency-check-${{ github.run_id }}
+        restore-keys: dependency-check-
+        
     - name: Run OWASP Dependency-Check
       run: |
         # Download and run OWASP Dependency-Check
@@ -115,10 +122,9 @@ jobs:
           ./dependency-check/bin/dependency-check.sh \
             --project "secure-rest-api" \
             --scan . \
-            --format ALL \
+            --format JSON \
             --out dependency-check-reports \
             --enableRetired \
-            --noupdate \
             || true
         else
           echo "Failed to download dependency-check, creating empty report"
