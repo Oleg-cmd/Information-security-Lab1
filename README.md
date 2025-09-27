@@ -203,7 +203,7 @@ const authenticateToken = async (req, res, next) => {
 3. **Build & Test** - сборка и тестирование приложения
 4. **Security Reports** - генерация сводных отчетов
 
-![CI/CD Pipeline]([https://via.placeholder.com/800x300/FF9800/ffffff?text=GitHub+Actions+Security+Pipeline](https://github.com/Oleg-cmd/Information-security-Lab1/actions/runs/18060423221))
+![CI/CD Pipeline](https://github.com/Oleg-cmd/Information-security-Lab1/actions/runs/18060423221)
 
 <img width="1091" height="652" alt="image" src="https://github.com/user-attachments/assets/02168730-46ff-4c89-a56d-a5e2ff62a98b" />
 
