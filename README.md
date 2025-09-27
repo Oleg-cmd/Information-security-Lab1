@@ -185,7 +185,6 @@ const authenticateToken = async (req, res, next) => {
 ### Отчет SCA (Software Composition Analysis)  
 Для анализа зависимостей используются:
 - **OWASP Dependency-Check** - проверка зависимостей на известные CVE
-- **retire.js** - поиск уязвимых JavaScript библиотек
 
 ![SCA Report](https://via.placeholder.com/800x400/4CAF50/ffffff?text=SCA+Dependency+Check+Results)
 

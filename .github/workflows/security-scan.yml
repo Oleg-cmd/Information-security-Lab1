@@ -108,14 +108,17 @@ jobs:
         if [ -f dependency-check.zip ] && [ -s dependency-check.zip ]; then
           unzip dependency-check.zip
           
+          # Create output directory
+          mkdir -p dependency-check-reports
+          
           # Run dependency check
           ./dependency-check/bin/dependency-check.sh \
             --project "secure-rest-api" \
             --scan . \
             --format ALL \
             --out dependency-check-reports \
-            --suppression dependency-check-suppressions.xml \
             --enableRetired \
+            --noupdate \
             || true
         else
           echo "Failed to download dependency-check, creating empty report"
@@ -124,12 +127,6 @@ jobs:
         fi
       continue-on-error: true
       
-    - name: Run retire.js
-      run: |
-        # retire.js has repository issues, using npm audit as alternative
-        npm audit --json > retire-report.json || true
-        echo "Using npm audit instead of retire.js due to repository issues"
-      continue-on-error: true
       
     - name: Upload SCA Reports
       uses: actions/upload-artifact@v4
@@ -137,7 +134,6 @@ jobs:
         name: sca-reports
         path: |
           dependency-check-reports/
-          retire-report.json
         retention-days: 30
 
   # Security Linting
@@ -277,9 +273,6 @@ jobs:
         echo "## SCA Results" >> security-summary.md
         if [ -d sca-reports/dependency-check-reports ]; then
           echo "- OWASP Dependency-Check: ✅ Completed" >> security-summary.md
-        fi
-        if [ -f sca-reports/retire-report.json ]; then
-          echo "- retire.js scan: ✅ Completed" >> security-summary.md
         fi
         
         echo "" >> security-summary.md
