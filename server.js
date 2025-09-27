@@ -37,8 +37,8 @@ app.use(cookieParser());
 // Custom security middleware
 app.use(securityMiddleware);
 
-// Note: CSRF protection is not implemented for this stateless REST API
-// For web forms, consider adding: app.use(csrf({ cookie: true }))
+// Note: CSRF protection is not required for this stateless REST API
+// REST APIs with JWT tokens are not vulnerable to CSRF attacks
 
 // Initialize database
 initDatabase().catch(error => {
