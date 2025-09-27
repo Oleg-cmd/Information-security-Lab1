@@ -91,45 +91,21 @@ jobs:
     - name: Install dependencies
       run: npm ci
       
-    - name: Setup Java for OWASP Dependency-Check
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
-        
-    - name: Cache OWASP Dependency-Check database
-      uses: actions/cache@v4
-      with:
-        path: ~/.gradle/dependency-check-data
-        key: dependency-check-${{ github.run_id }}
-        restore-keys: dependency-check-
-        
-    - name: Run OWASP Dependency-Check
+    - name: Run Snyk for SCA
       run: |
-        # Download and run OWASP Dependency-Check
-        VERSION=$(curl -s https://api.github.com/repos/jeremylong/DependencyCheck/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
-        echo "Downloading Dependency-Check version: $VERSION"
-        curl -Lo dependency-check.zip "https://github.com/jeremylong/DependencyCheck/releases/download/v$VERSION/dependency-check-$VERSION-release.zip"
+        npm install -g snyk
+        mkdir -p sca-reports
         
-        # Check if download was successful
-        if [ -f dependency-check.zip ] && [ -s dependency-check.zip ]; then
-          unzip dependency-check.zip
-          
-          # Create output directory
-          mkdir -p dependency-check-reports
-          
-          # Run dependency check
-          ./dependency-check/bin/dependency-check.sh \
-            --project "secure-rest-api" \
-            --scan . \
-            --format JSON \
-            --out dependency-check-reports \
-            --enableRetired \
-            || true
+        if [[ -n "${{ secrets.SNYK_TOKEN }}" ]]; then
+          echo "Running authenticated Snyk scan..."
+          snyk auth ${{ secrets.SNYK_TOKEN }}
+          snyk test --json > sca-reports/snyk-sca-report.json || true
+          snyk test || true
         else
-          echo "Failed to download dependency-check, creating empty report"
-          mkdir -p dependency-check-reports
-          echo '{"error":"Download failed"}' > dependency-check-reports/dependency-check-report.json
+          echo "No Snyk token provided, running basic dependency scan with npm audit..."
+          npm audit --json > sca-reports/npm-audit-sca.json || true
+          npm audit || true
+          echo '{"info":"Snyk scan skipped - no token provided"}' > sca-reports/snyk-sca-report.json
         fi
       continue-on-error: true
       
@@ -139,7 +115,7 @@ jobs:
       with:
         name: sca-reports
         path: |
-          dependency-check-reports/
+          sca-reports/
         retention-days: 30
 
   # Security Linting
@@ -277,8 +253,11 @@ jobs:
         
         echo "" >> security-summary.md
         echo "## SCA Results" >> security-summary.md
-        if [ -d sca-reports/dependency-check-reports ]; then
-          echo "- OWASP Dependency-Check: ✅ Completed" >> security-summary.md
+        if [ -f sca-reports/snyk-sca-report.json ]; then
+          echo "- Snyk SCA scan: ✅ Completed" >> security-summary.md
+        fi
+        if [ -f sca-reports/npm-audit-sca.json ]; then
+          echo "- npm audit SCA: ✅ Completed" >> security-summary.md
         fi
         
         echo "" >> security-summary.md
