@@ -3,6 +3,7 @@ const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const { initDatabase } = require('./src/models');
 const authRoutes = require('./src/routes/auth');
 const apiRoutes = require('./src/routes/api');
@@ -31,9 +32,13 @@ app.use(limiter);
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 
 // Custom security middleware
 app.use(securityMiddleware);
+
+// Note: CSRF protection is not implemented for this stateless REST API
+// For web forms, consider adding: app.use(csrf({ cookie: true }))
 
 // Initialize database
 initDatabase().catch(error => {

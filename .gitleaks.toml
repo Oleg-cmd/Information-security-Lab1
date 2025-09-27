@@ -1,0 +1,30 @@
+title = "gitleaks config"
+
+[extend]
+# Exclude example tokens and documentation
+useDefault = true
+
+[[rules]]
+description = "Generic API Key"
+id = "generic-api-key"
+regex = '''[a-zA-Z0-9_-]*[a-zA-Z0-9][a-zA-Z0-9_-]*'''
+keywords = [
+    "api",
+    "key",
+    "token",
+    "secret",
+]
+
+[allowlist]
+description = "Global allow list"
+regexes = [
+    '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9''', # Example JWT token in docs
+    '''Bearer YOUR_JWT_TOKEN''', # Placeholder text
+    '''Authorization: Bearer <token>''', # Documentation placeholder
+]
+
+paths = [
+    '''README\.md''',
+    '''SECURITY_DEMO\.md''',
+    '''\.md$''', # All markdown files
+]

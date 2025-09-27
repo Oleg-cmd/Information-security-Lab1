@@ -181,10 +181,10 @@ const createDefaultUsers = async () => {
 
       if (!existingUser) {
         await User.create(userData);
-        console.log(`✅ Default user created: ${userData.username}`);
+        console.log('✅ Default user created:', userData.username);
       }
     } catch (error) {
-      console.error(`Error creating user ${userData.username}:`, error.message);
+      console.error('Error creating user:', userData.username, error.message);
     }
   }
 };
